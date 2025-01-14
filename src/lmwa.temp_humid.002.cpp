@@ -356,6 +356,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 //connect MQTT if not
 void reconnect() {
+  int mqtt_retries = 0;  
+
   // Loop until we're reconnected
   while (!pubsub_client.connected()) {
     Serial.print("Attempting MQTT connection...");
@@ -366,11 +368,16 @@ void reconnect() {
     if (pubsub_client.connect(clientId.c_str(), mqtt_user, mqtt_password)) {
       Serial.println("connected");
     } else {
+      mqtt_retries++; 
       Serial.print("failed, rc=");
       Serial.print(pubsub_client.state());
       Serial.println(" try again in 5 seconds");
       // Wait 5 seconds before retrying
       delay(5000);
+    }
+    if(mqtt_retries==2){
+      Serial.println("Too many retries. Looping.");
+      return;
     }
   }
 }
@@ -378,6 +385,16 @@ void reconnect() {
 void sendMQTT(double mqtt_payload) {
 
   if (!pubsub_client.connected()) {
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setCursor(0, 0);
+    display.print("Sensor: "); display.println(SensorType);
+    display.print("Prog.ID: "); display.println(ProgramID);
+    display.println("\nMQTT Offline!\n");
+    display.print("Hostname: "); display.println(WiFi.getHostname());
+    display.print("IP: "); display.println(WiFi.localIP());
+    display.print(uptimeTotal);
+    display.display();
     reconnect();
   }
 
@@ -395,6 +412,9 @@ void sendMQTT(double mqtt_payload) {
 
     Serial.print("Publishing message: "); Serial.println(msg);
     pubsub_client.publish(mqtt_topic, msg);
+  }else{
+    Serial.println("MQTT Not Connected... Bail on loop!\n");
   }
+
 
 }
